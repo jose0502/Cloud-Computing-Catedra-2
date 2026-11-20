@@ -2,7 +2,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "8080:80"        # R-04: Corregido el puerto interno (Nginx escucha en 80)
+      - "8080:80"        
     depends_on:
       - backend
 
@@ -11,14 +11,15 @@ services:
     restart: always
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_USER:-appuser}:${POSTGRES_PASSWORD:-rescue123}@db:5432/${POSTGRES_DB:-appdb}"
-    healthcheck:         # Corregido: Ahora es hermano de environment
+    healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 15s  # Agregado para dar tiempo a que FastAPI arranque
+      start_period: 15s
     depends_on:
-      - db
+      db:
+        condition: service_healthy  
 
   db:
     image: postgres:16-alpine
@@ -27,7 +28,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rescue123}
       POSTGRES_DB: ${POSTGRES_DB:-appdb}
     volumes:
-      - postgres_data:/var/lib/postgresql/data  # R-06: Volumen para persistencia
+      - postgres_data:/var/lib/postgresql/data  
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-appuser} -d ${POSTGRES_DB:-appdb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  postgres_data:         # R-06: Declaración del volumen nombrado
+  postgres_data:         
